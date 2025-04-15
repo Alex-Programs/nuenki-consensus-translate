@@ -1,6 +1,4 @@
-use Languages::TargetLanguage;
-
-use reqwest::blocking::Client;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
@@ -35,6 +33,7 @@ struct MessageResponse {
 pub struct OpenRouterClient {
     api_key: String,
     base_url: String,
+    client: Client,
 }
 
 impl OpenRouterClient {
@@ -42,35 +41,44 @@ impl OpenRouterClient {
         Self {
             api_key: api_key.to_string(),
             base_url: "https://openrouter.ai/api/v1".to_string(),
+            client: Client::new(),
         }
     }
 
-    pub fn complete(
+    pub async fn complete(
         &self,
-        input_text: &str,
+        system_prompt: &str,
+        main_prompt: &str,
         model: &str,
         temperature: f32,
     ) -> Result<String, Box<dyn Error>> {
         let url = format!("{}/chat/completions", self.base_url);
-        let client = Client::new();
         let request_body = ChatRequest {
             model: model.to_string(),
-            messages: vec![Message {
-                role: "user".to_string(),
-                content: input_text.to_string(),
-            }],
+            messages: vec![
+                Message {
+                    role: "system".to_string(),
+                    content: system_prompt.to_string(),
+                },
+                Message {
+                    role: "user".to_string(),
+                    content: main_prompt.to_string(),
+                },
+            ],
             temperature,
         };
 
-        let response = client
+        let response = self
+            .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .json(&request_body)
-            .send()?;
+            .send()
+            .await?;
 
-        let chat_response: ChatResponse = response.json()?;
+        let chat_response: ChatResponse = response.json().await?;
         if chat_response.choices.is_empty() {
-            return Err("No choices returned in the response".into());
+            return Err("No choices returned from OpenRouter API".into());
         }
 
         Ok(chat_response.choices[0].message.content.clone())

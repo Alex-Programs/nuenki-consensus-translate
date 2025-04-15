@@ -9,8 +9,8 @@ const sonnet35: &'static str = "anthropic/claude-3.5-sonnet";
 const gemma3_27b: &'static str = "google/gemma-3-27b-it";
 
 pub struct SourceResponse {
-    translate_sources: Vec<TranslationSource>,
-    eval_source: TranslationSource,
+    pub translate_sources: Vec<TranslationSource>,
+    pub eval_source: TranslationSource,
 }
 
 pub fn get_appropriate_sources(target_lang: TargetLanguage) -> SourceResponse {
