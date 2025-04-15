@@ -18,6 +18,7 @@ struct Message {
 #[derive(Deserialize)]
 struct ChatResponse {
     choices: Vec<Choice>,
+    usage: Usage,
 }
 
 #[derive(Deserialize)]
@@ -28,6 +29,14 @@ struct Choice {
 #[derive(Deserialize)]
 struct MessageResponse {
     content: String,
+}
+
+#[derive(Deserialize)]
+struct Usage {
+    completion_tokens: u32,
+    prompt_tokens: u32,
+    total_tokens: u32,
+    total_cost: f64, // Cost provided by OpenRouter
 }
 
 pub struct OpenRouterClient {
@@ -51,7 +60,7 @@ impl OpenRouterClient {
         main_prompt: &str,
         model: &str,
         temperature: f32,
-    ) -> Result<String, Box<dyn Error>> {
+    ) -> Result<(String, f64), Box<dyn Error>> {
         let url = format!("{}/chat/completions", self.base_url);
         let request_body = ChatRequest {
             model: model.to_string(),
@@ -67,7 +76,6 @@ impl OpenRouterClient {
             ],
             temperature,
         };
-
         let response = self
             .client
             .post(&url)
@@ -75,12 +83,13 @@ impl OpenRouterClient {
             .json(&request_body)
             .send()
             .await?;
-
         let chat_response: ChatResponse = response.json().await?;
         if chat_response.choices.is_empty() {
             return Err("No choices returned from OpenRouter API".into());
         }
-
-        Ok(chat_response.choices[0].message.content.clone())
+        Ok((
+            chat_response.choices[0].message.content.clone(),
+            chat_response.usage.total_cost,
+        ))
     }
 }

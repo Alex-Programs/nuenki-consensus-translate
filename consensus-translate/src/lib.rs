@@ -26,6 +26,7 @@ pub enum TranslationSource {
 #[derive(Serialize)]
 pub struct TranslationResponse {
     translations: Vec<TranslationResponseItem>,
+    total_cost_thousandths_cent: u32,
 }
 
 #[derive(Serialize)]
@@ -80,19 +81,21 @@ pub async fn consensus_translate(
     );
 
     let mut translation_futures = Vec::new();
+    let mut total_cost: f64 = 0.0;
+
     for source in translation_methods.translate_sources {
-        let future: Pin<Box<dyn Future<Output = Result<(String, String), String>> + Send>> =
+        let future: Pin<Box<dyn Future<Output = Result<(String, String, f64), String>> + Send>> =
             match source {
                 TranslationSource::Openrouter(model_name) => {
                     let openrouter_client = openrouter::OpenRouterClient::new(&openrouter_api_key);
                     let system_prompt = system_prompt.clone();
                     let sentence = sentence.clone();
                     Box::pin(async move {
-                        let translation = openrouter_client
+                        let (translation, cost) = openrouter_client
                             .complete(&system_prompt, &sentence, model_name, 0.7)
                             .await
                             .map_err(|e| format!("OpenRouter error for {}: {}", model_name, e))?;
-                        Ok((model_name.to_string(), translation))
+                        Ok((model_name.to_string(), translation, cost))
                     })
                 }
             };
@@ -103,7 +106,8 @@ pub async fn consensus_translate(
     let mut translations = Vec::new();
     for result in translation_results {
         match result {
-            Ok((source_name, translation)) => {
+            Ok((source_name, translation, cost)) => {
+                total_cost += cost;
                 if !translation.contains("483") {
                     translations.push((source_name, translation));
                 }
@@ -132,7 +136,7 @@ pub async fn consensus_translate(
     eval_prompt.push_str("\nOutput format:\n- Reasoning: Explain your evaluation and synthesis process.\n- JSON: Use this schema:\n```json\n{\n  \"scores\": {\n    \"{model_name}\": number,\n    ...\n  },\n  \"synthesized\": \"string\"\n}\n```\n\nProvide reasoning, then JSON in ```json``` block.");
 
     let openrouter_client = openrouter::OpenRouterClient::new(&openrouter_api_key);
-    let eval_response = openrouter_client
+    let (eval_response, eval_cost) = openrouter_client
         .complete(
             "You are an expert translator.",
             &eval_prompt,
@@ -141,6 +145,8 @@ pub async fn consensus_translate(
         )
         .await
         .map_err(|e| format!("Evaluation error: {}", e))?;
+
+    total_cost += eval_cost;
 
     let json_start = eval_response
         .find("```json")
@@ -185,7 +191,11 @@ pub async fn consensus_translate(
         score: 0,
     });
 
+    // Convert cost from dollars to thousandths of a cent (multiply by 100,000)
+    let total_cost_thousandths_cent = (total_cost * 100_000.0).round() as u32;
+
     Ok(TranslationResponse {
         translations: translations_response,
+        total_cost_thousandths_cent,
     })
 }
