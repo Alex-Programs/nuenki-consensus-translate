@@ -50,9 +50,10 @@ pub async fn consensus_translate(
     formality: Formality,
     source_lang: Option<TargetLanguage>,
     openrouter_api_key: String,
-    deepl_api_key: String,
+    deepl_api_key: Option<String>,
 ) -> Result<TranslationResponse, String> {
-    let translation_methods = get_appropriate_sources(language.clone());
+    let is_deepl_disabled = deepl_api_key.is_none();
+    let translation_methods = get_appropriate_sources(language.clone(), is_deepl_disabled);
 
     let target_lang_str = language.to_llm_format_n();
     let base_prompt = format!(
@@ -82,10 +83,8 @@ pub async fn consensus_translate(
             match source {
                 TranslationSource::Openrouter(model_name) => {
                     let openrouter_client = openrouter::OpenRouterClient::new(&openrouter_api_key);
-
                     let system_prompt = system_prompt.clone();
                     let sentence = sentence.clone();
-
                     Box::pin(async move {
                         let translation = openrouter_client
                             .complete(&system_prompt, &sentence, model_name, 0.7)
@@ -95,14 +94,15 @@ pub async fn consensus_translate(
                     })
                 }
                 TranslationSource::Deepl => {
+                    let Some(deepl_key) = deepl_api_key.as_ref() else {
+                        continue; // Skip DeepL if no API key
+                    };
                     let deepl_client =
-                        deepl::DeepLClient::new(&deepl_api_key, "https://api.deepl.com/v2");
-
+                        deepl::DeepLClient::new(deepl_key, "https://api.deepl.com/v2");
                     let target_lang = language.to_deepl_format_n();
                     let source_lang_str = source_lang.as_ref().map(|sl| sl.to_deepl_format_n());
                     let sentence = sentence.clone();
                     let formality = formality.clone();
-
                     Box::pin(async move {
                         let translation = deepl_client
                             .translate(
@@ -113,7 +113,7 @@ pub async fn consensus_translate(
                             )
                             .await
                             .map_err(|e| format!("DeepL error: {}", e))?;
-                        Ok(("Deepl".to_string(), translation))
+                        Ok(("DeepL".to_string(), translation))
                     })
                 }
             };
@@ -158,13 +158,14 @@ pub async fn consensus_translate(
     }
     eval_prompt.push_str("\nOutput format:\n- Reasoning: Explain your evaluation and synthesis process.\n- JSON: Use this schema:\n```json\n{\n  \"scores\": {\n    \"{model_name}\": number,\n    ...\n  },\n  \"synthesized\": \"string\"\n}\n```\n\nProvide reasoning, then JSON in ```json``` block.");
 
-    let openrouter_client = openrouter::OpenRouterClient::new("your_openrouter_api_key");
+    let openrouter_client = openrouter::OpenRouterClient::new(&openrouter_api_key);
+
     let eval_response = openrouter_client
         .complete(
             "You are an expert translator.",
             &eval_prompt,
             eval_model_name,
-            0.7,
+            0.2,
         )
         .await
         .map_err(|e| format!("Evaluation error: {}", e))?;
@@ -206,7 +207,7 @@ pub async fn consensus_translate(
     }
 
     translations_response.push(TranslationResponseItem {
-        model: format!("Synthesized ({})", eval_model_name).to_string(),
+        model: format!("Synthesized ({})", eval_model_name),
         combined: true,
         text: synthesized,
         score: 0,

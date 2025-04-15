@@ -13,7 +13,14 @@ pub struct SourceResponse {
     pub eval_source: TranslationSource,
 }
 
-pub fn get_appropriate_sources(target_lang: TargetLanguage) -> SourceResponse {
+// I realised halfway through making this that
+// the deepl TOS really doesn't like "derivative" products like this :/
+// so we're making it default-disabled
+
+pub fn get_appropriate_sources(
+    target_lang: TargetLanguage,
+    is_deepl_disabled: bool,
+) -> SourceResponse {
     match target_lang {
         TargetLanguage::Chinese | TargetLanguage::ChineseTraditional => SourceResponse {
             translate_sources: vec![
@@ -31,13 +38,23 @@ pub fn get_appropriate_sources(target_lang: TargetLanguage) -> SourceResponse {
             ],
             eval_source: TranslationSource::Openrouter(gpt41),
         },
-        TargetLanguage::French => SourceResponse {
-            translate_sources: vec![
-                TranslationSource::Deepl,
-                TranslationSource::Openrouter(gpt41),
-                TranslationSource::Openrouter(gpt4o),
-            ],
-            eval_source: TranslationSource::Openrouter(gpt41),
+        TargetLanguage::French => match is_deepl_disabled {
+            true => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Openrouter(llama3370b),
+                    TranslationSource::Openrouter(gpt41),
+                    TranslationSource::Openrouter(gpt4o),
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
+            false => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Deepl,
+                    TranslationSource::Openrouter(gpt41),
+                    TranslationSource::Openrouter(gpt4o),
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
         },
         TargetLanguage::German => SourceResponse {
             translate_sources: vec![
@@ -63,13 +80,23 @@ pub fn get_appropriate_sources(target_lang: TargetLanguage) -> SourceResponse {
             ],
             eval_source: TranslationSource::Openrouter(gpt41),
         },
-        TargetLanguage::Japanese => SourceResponse {
-            translate_sources: vec![
-                TranslationSource::Openrouter(gpt41),
-                TranslationSource::Openrouter(gpt4o),
-                TranslationSource::Deepl,
-            ],
-            eval_source: TranslationSource::Openrouter(gpt41),
+        TargetLanguage::Japanese => match is_deepl_disabled {
+            true => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Openrouter(gpt41),
+                    TranslationSource::Openrouter(gpt4o),
+                    TranslationSource::Openrouter(sonnet35),
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
+            false => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Openrouter(gpt41),
+                    TranslationSource::Openrouter(gpt4o),
+                    TranslationSource::Deepl,
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
         },
         TargetLanguage::Korean => SourceResponse {
             translate_sources: vec![
@@ -79,21 +106,41 @@ pub fn get_appropriate_sources(target_lang: TargetLanguage) -> SourceResponse {
             ],
             eval_source: TranslationSource::Openrouter(gpt41),
         },
-        TargetLanguage::Spanish => SourceResponse {
-            translate_sources: vec![
-                TranslationSource::Openrouter(gpt41),
-                TranslationSource::Openrouter(sonnet35),
-                TranslationSource::Deepl,
-            ],
-            eval_source: TranslationSource::Openrouter(gpt41),
+        TargetLanguage::Spanish => match is_deepl_disabled {
+            true => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Openrouter(gpt41),
+                    TranslationSource::Openrouter(sonnet35),
+                    TranslationSource::Openrouter(gpt4o),
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
+            false => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Openrouter(gpt41),
+                    TranslationSource::Openrouter(sonnet35),
+                    TranslationSource::Deepl,
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
         },
-        TargetLanguage::Swedish => SourceResponse {
-            translate_sources: vec![
-                TranslationSource::Deepl,
-                TranslationSource::Openrouter(gpt4o),
-                TranslationSource::Openrouter(gpt41),
-            ],
-            eval_source: TranslationSource::Openrouter(gpt41),
+        TargetLanguage::Swedish => match is_deepl_disabled {
+            true => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Openrouter(llama3370b),
+                    TranslationSource::Openrouter(gpt4o),
+                    TranslationSource::Openrouter(gpt41),
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
+            false => SourceResponse {
+                translate_sources: vec![
+                    TranslationSource::Deepl,
+                    TranslationSource::Openrouter(gpt4o),
+                    TranslationSource::Openrouter(gpt41),
+                ],
+                eval_source: TranslationSource::Openrouter(gpt41),
+            },
         },
         TargetLanguage::Ukrainian => SourceResponse {
             translate_sources: vec![
@@ -111,13 +158,26 @@ pub fn get_appropriate_sources(target_lang: TargetLanguage) -> SourceResponse {
             ],
             eval_source: TranslationSource::Openrouter(gpt41),
         },
-        _ => SourceResponse {
-            translate_sources: vec![
-                TranslationSource::Openrouter(gpt41),
-                TranslationSource::Openrouter(gemma3_27b),
-                TranslationSource::Openrouter(gpt4o),
-            ],
-            eval_source: TranslationSource::Openrouter(gpt41),
-        },
+        _ => {
+            if target_lang.supports_deepl_n() && !is_deepl_disabled {
+                SourceResponse {
+                    translate_sources: vec![
+                        TranslationSource::Openrouter(gpt41),
+                        TranslationSource::Deepl,
+                        TranslationSource::Openrouter(gpt4o),
+                    ],
+                    eval_source: TranslationSource::Openrouter(gpt41),
+                }
+            } else {
+                SourceResponse {
+                    translate_sources: vec![
+                        TranslationSource::Openrouter(gpt41),
+                        TranslationSource::Openrouter(gemma3_27b),
+                        TranslationSource::Openrouter(gpt4o),
+                    ],
+                    eval_source: TranslationSource::Openrouter(gpt41),
+                }
+            }
+        }
     }
 }
