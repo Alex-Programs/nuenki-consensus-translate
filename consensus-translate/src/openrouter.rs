@@ -1,6 +1,7 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use tracing::{debug, error, info, warn};
 
 #[derive(Serialize)]
 struct ChatRequest {
@@ -17,8 +18,10 @@ struct Message {
 
 #[derive(Deserialize)]
 struct ChatResponse {
+    #[serde(default)]
     choices: Vec<Choice>,
-    usage: Usage,
+    #[serde(default)]
+    usage: Option<Usage>,
 }
 
 #[derive(Deserialize)]
@@ -33,10 +36,21 @@ struct MessageResponse {
 
 #[derive(Deserialize)]
 struct Usage {
-    completion_tokens: u32,
     prompt_tokens: u32,
-    total_tokens: u32,
-    total_cost: f64, // Cost provided by OpenRouter
+    completion_tokens: u32,
+}
+
+#[derive(Deserialize)]
+struct ErrorResponse {
+    error: ErrorDetails,
+}
+
+#[derive(Deserialize)]
+struct ErrorDetails {
+    message: String,
+    #[serde(rename = "type")]
+    error_type: String,
+    code: Option<i32>,
 }
 
 pub struct OpenRouterClient {
@@ -52,6 +66,24 @@ impl OpenRouterClient {
             base_url: "https://openrouter.ai/api/v1".to_string(),
             client: Client::new(),
         }
+    }
+
+    fn calculate_cost(model: &str, prompt_tokens: u32, completion_tokens: u32) -> f64 {
+        let (input_price_per_million, output_price_per_million) = match model {
+            "openai/gpt-4o-2024-11-20" => (2.5, 10.0),
+            "openai/openai/gpt-4.1" => (2.0, 8.0),
+            "google/gemini-2.0-flash-001" => (0.1, 0.4),
+            "meta-llama/llama-3.3-70b-instruct" => (0.1, 0.25),
+            "anthropic/claude-3.5-sonnet" => (3.0, 15.0),
+            "google/gemma-3-27b-it" => (0.1, 0.2),
+            _ => {
+                warn!("Unknown model '{}', defaulting to zero cost", model);
+                (0.0, 0.0)
+            }
+        };
+        let input_cost = (prompt_tokens as f64 * input_price_per_million) / 1_000_000.0;
+        let output_cost = (completion_tokens as f64 * output_price_per_million) / 1_000_000.0;
+        input_cost + output_cost
     }
 
     pub async fn complete(
@@ -76,6 +108,11 @@ impl OpenRouterClient {
             ],
             temperature,
         };
+        debug!(
+            "Sending request to OpenRouter: url={}, model={}, system_prompt='{}', main_prompt='{}'",
+            url, model, system_prompt, main_prompt
+        );
+
         let response = self
             .client
             .post(&url)
@@ -83,13 +120,63 @@ impl OpenRouterClient {
             .json(&request_body)
             .send()
             .await?;
-        let chat_response: ChatResponse = response.json().await?;
+
+        let status = response.status();
+        debug!("Received response with status: {}", status);
+
+        let raw_body = response.text().await?;
+        debug!("Raw response body: {}", raw_body);
+
+        if !status.is_success() {
+            let error_response: ErrorResponse = serde_json::from_str(&raw_body).map_err(|e| {
+                error!(
+                    "Failed to parse error response: {}, raw_body: {}",
+                    e, raw_body
+                );
+                format!("Invalid error response: {}", e)
+            })?;
+            warn!(
+                "OpenRouter error: status={}, message='{}', type='{}', code={:?}",
+                status,
+                error_response.error.message,
+                error_response.error.error_type,
+                error_response.error.code
+            );
+            return Err(format!(
+                "OpenRouter API error: {} (status: {})",
+                error_response.error.message, status
+            )
+            .into());
+        }
+
+        let chat_response: ChatResponse = serde_json::from_str(&raw_body).map_err(|e| {
+            error!(
+                "Failed to parse ChatResponse: {}, raw_body: {}",
+                e, raw_body
+            );
+            format!("Error decoding response body: {}", e)
+        })?;
+
         if chat_response.choices.is_empty() {
+            error!("No choices in response: {}", raw_body);
             return Err("No choices returned from OpenRouter API".into());
         }
-        Ok((
-            chat_response.choices[0].message.content.clone(),
-            chat_response.usage.total_cost,
-        ))
+
+        let (prompt_tokens, completion_tokens) = chat_response
+            .usage
+            .as_ref()
+            .map(|u| (u.prompt_tokens, u.completion_tokens))
+            .unwrap_or_else(|| {
+                warn!("No usage data in response, defaulting tokens to 0");
+                (0, 0)
+            });
+
+        let cost = Self::calculate_cost(model, prompt_tokens, completion_tokens);
+        info!(
+            "Parsed response: content='{}', prompt_tokens={}, completion_tokens={}, cost={}",
+            chat_response.choices[0].message.content, prompt_tokens, completion_tokens, cost
+        );
+
+        Ok((chat_response.choices[0].message.content.clone(), cost))
     }
 }
