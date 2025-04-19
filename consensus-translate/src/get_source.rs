@@ -2,7 +2,7 @@ use crate::{languages::Language, TranslationSource};
 
 const GPT4O: &'static str = "openai/gpt-4o-2024-11-20";
 const GPT41: &'static str = "openai/gpt-4.1";
-const GEMINI_FLASH2: &'static str = "google/gemini-2.0-flash-001";
+const GEMINI_FLASH2_5: &'static str = "google/google/gemini-2.5-flash-preview";
 const LLAMA33_70B: &'static str = "meta-llama/llama-3.3-70b-instruct";
 const SONNET35: &'static str = "anthropic/claude-3.5-sonnet";
 const GEMMA3_27B: &'static str = "google/gemma-3-27b-it";
@@ -19,7 +19,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT4O),
                 TranslationSource::Openrouter(GPT41),
-                TranslationSource::Openrouter(GEMINI_FLASH2),
+                TranslationSource::Openrouter(GEMINI_FLASH2_5),
                 TranslationSource::Openrouter(GROK3),
             ],
             eval_source: TranslationSource::Openrouter(GPT4O),
@@ -104,7 +104,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
         Language::Ukrainian => SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT41),
-                TranslationSource::Openrouter(GEMINI_FLASH2),
+                TranslationSource::Openrouter(GEMINI_FLASH2_5),
                 TranslationSource::Openrouter(GPT4O),
                 TranslationSource::Openrouter(GROK3),
             ],

@@ -36,7 +36,6 @@ pub struct TranslationResponseItem {
     pub model: String,
     pub combined: bool,
     pub text: String,
-    pub score: u32,
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -173,16 +172,20 @@ pub async fn consensus_translate(
     };
 
     let mut eval_prompt = format!(
-        "You are evaluating translations from {} to {} with formality [{}]. For each translation, assign a score from 1-10 based on naturalness, idiomatic usage, accuracy, and tone preservation. DON'T JUST RETURN VALUES FROM 7-10, ACTUALLY BE HARSH. Then, synthesize a new translation combining their strengths. Provide concise reasoning (up to 100 words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user), followed by JSON output.\n\nTranslations:\n",
+        "You are evaluating translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones. Provide concise reasoning (up to 30 words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2'), followed by JSON output.\n\nTranslations:\n",
         source_lang_str,
         target_lang.to_llm_format(),
         formality_explicit
     );
 
     for (source_name, translation) in &translations {
-        eval_prompt.push_str(&format!("{}: \"{}\"\n", source_name, translation));
+        eval_prompt.push_str(&format!("\"{}\"\n", translation));
     }
-    eval_prompt.push_str("\nOutput format:\n- Reasoning: Explain your evaluation and synthesis process.\n- JSON: Use this schema:\n```json\n{\n  \"scores\": {\n    \"{model_name}\": number,\n    ...\n  },\n  \"synthesized\": \"string\"\n}\n```\n\nProvide reasoning, then JSON in ```json``` block.");
+    eval_prompt.push_str(&format!("\n(Original text: {})", sentence));
+
+    eval_prompt.push_str(
+        "\nOutput reasoning, then a combined result in a three-backtick code block (```).",
+    );
     debug!("Evaluation prompt: {}", eval_prompt);
 
     let openrouter_client = openrouter::OpenRouterClient::new(&openrouter_api_key);
@@ -206,62 +209,55 @@ pub async fn consensus_translate(
     debug!("Evaluation cost: {}", eval_cost);
     total_cost += eval_cost;
 
-    let json_start = eval_response.find("```json").ok_or_else(|| {
-        error!("No JSON block found in evaluation response");
-        "No JSON block in evaluation response".to_string()
-    })?;
-    debug!("JSON block start index: {}", json_start);
-
-    let json_end = eval_response.rfind("```").ok_or_else(|| {
-        error!("No closing ``` found in evaluation response");
-        "No closing ``` in evaluation response".to_string()
-    })?;
-    debug!("JSON block end index: {}", json_end);
-
-    let json_str = &eval_response[json_start + 7..json_end].trim();
-    debug!("Extracted JSON string: {}", json_str);
-
-    let json_value: Value = serde_json::from_str(json_str).map_err(|e| {
-        error!("JSON parsing error: {}", e);
-        debug!("Failed JSON string: {}", json_str);
-        format!("JSON parsing error: {}", e)
-    })?;
-    debug!("Parsed JSON value: {:?}", json_value);
-
-    let scores = json_value["scores"].as_object().ok_or_else(|| {
-        error!("No 'scores' object in evaluation JSON: {:?}", json_value);
-        "No 'scores' in evaluation JSON".to_string()
-    })?;
-    debug!("Scores: {:?}", scores);
-
-    let synthesized = json_value["synthesized"]
-        .as_str()
-        .ok_or_else(|| {
-            error!(
-                "No 'synthesized' string in evaluation JSON: {:?}",
-                json_value
-            );
-            "No 'synthesized' in evaluation JSON".to_string()
-        })?
-        .to_string();
-    debug!("Synthesized translation: {}", synthesized);
+    // --- Start: Modified parsing ---
+    let synthesized = match eval_response.find("```") {
+        Some(start_idx) => {
+            let after_first_ticks = &eval_response[start_idx + 3..];
+            match after_first_ticks.find("```") {
+                Some(end_idx) => {
+                    let content = after_first_ticks[..end_idx].trim();
+                    // Check if the extracted content is empty, which might happen if the model just outputs ``` ```
+                    if content.is_empty() {
+                        error!(
+                            "Extracted synthesized translation is empty. Raw response: '{}'",
+                            eval_response
+                        );
+                        Err(
+                            "Empty synthesized translation content found within backticks"
+                                .to_string(),
+                        )
+                    } else {
+                        debug!("Extracted synthesized translation: {}", content);
+                        Ok(content.to_string())
+                    }
+                }
+                None => {
+                    error!(
+                        "No closing ``` found after opening ``` in evaluation response: '{}'",
+                        eval_response
+                    );
+                    Err("No closing ``` found in evaluation response".to_string())
+                }
+            }
+        }
+        None => {
+            error!("No ``` found in evaluation response: '{}'", eval_response);
+            Err("No ``` found in evaluation response".to_string())
+        }
+    }?;
 
     let mut translations_response = Vec::new();
 
     for (source_name, translation) in translations {
-        let score = scores
-            .get(&source_name)
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32;
+        // Removed score handling
         debug!(
-            "Adding translation: model={}, score={}, text='{}'",
-            source_name, score, translation
+            "Adding translation: model={}, text='{}'",
+            source_name, translation
         );
         translations_response.push(TranslationResponseItem {
             model: source_name,
             combined: false,
             text: translation,
-            score,
         });
     }
 
@@ -273,7 +269,6 @@ pub async fn consensus_translate(
         model: format!("Synthesized ({})", eval_model_name),
         combined: true,
         text: synthesized,
-        score: 0,
     });
 
     // Convert cost from dollars to thousandths of a cent (multiply by 100,000)
