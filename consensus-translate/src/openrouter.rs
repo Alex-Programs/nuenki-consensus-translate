@@ -71,11 +71,12 @@ impl OpenRouterClient {
     fn calculate_cost(model: &str, prompt_tokens: u32, completion_tokens: u32) -> f64 {
         let (input_price_per_million, output_price_per_million) = match model {
             "openai/gpt-4o-2024-11-20" => (2.5, 10.0),
-            "openai/openai/gpt-4.1" => (2.0, 8.0),
+            "openai/gpt-4.1" => (2.0, 8.0),
             "google/gemini-2.0-flash-001" => (0.1, 0.4),
             "meta-llama/llama-3.3-70b-instruct" => (0.1, 0.25),
             "anthropic/claude-3.5-sonnet" => (3.0, 15.0),
             "google/gemma-3-27b-it" => (0.1, 0.2),
+            "x-ai/grok-3-beta" => (3.0, 15.0),
             _ => {
                 warn!("Unknown model '{}', defaulting to zero cost", model);
                 (0.0, 0.0)
