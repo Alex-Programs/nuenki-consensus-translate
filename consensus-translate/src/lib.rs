@@ -200,8 +200,17 @@ pub async fn consensus_translate(
         Formality::MoreFormal => "More formal",
     };
 
+    let mut thinking_words = sentence.len() / 4;
+    if thinking_words < 50 {
+        thinking_words = 50;
+    }
+    if thinking_words > 120 {
+        thinking_words = 120;
+    }
+
     let eval_system_prompt = format!(
-        "You are evaluating translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones. Provide concise reasoning (up to 60 words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```).",
+        "You are evaluating translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones. Provide concise reasoning (up to {} words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```).",
+        thinking_words,
         source_lang_str,
         target_lang.to_llm_format(),
         formality_explicit
