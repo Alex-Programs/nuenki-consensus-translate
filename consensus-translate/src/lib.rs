@@ -46,18 +46,23 @@ pub enum Formality {
     MoreFormal,
 }
 
-fn strip_outer_brackets(s: &str) -> String {
+fn strip_outer_brackets(s: &str) -> &str {
     let trimmed = s.trim();
+
     let mut start = 0;
     let mut end = trimmed.len();
-    let chars: Vec<_> = trimmed.chars().collect();
-    while start < end && chars[start] == '[' {
+
+    let bytes = trimmed.as_bytes();
+
+    while start < end && bytes[start] == b'[' {
         start += 1;
     }
-    while end > start && chars[end - 1] == ']' {
+
+    while end > start && bytes[end - 1] == b']' {
         end -= 1;
     }
-    chars[start..end].iter().collect()
+
+    &trimmed[start..end]
 }
 
 pub async fn consensus_translate(
@@ -139,7 +144,7 @@ pub async fn consensus_translate(
                         .complete(&system_prompt_clone, &user_prompt_clone, model_name, 0.7) // Use separate system/user prompts
                         .await
                         .map_err(|e| format!("OpenRouter error for {}: {}", model_name, e))?;
-                    translation = strip_outer_brackets(&translation);
+                    translation = strip_outer_brackets(&translation).to_string();
 
                     let duration = start_time.elapsed();
                     let duration_ms = duration.as_millis() as u32;
@@ -297,7 +302,7 @@ pub async fn consensus_translate(
         translations_response.push(TranslationResponseItem {
             model: source_name,
             combined: false,
-            text: strip_outer_brackets(&translation),
+            text: strip_outer_brackets(&translation).to_string(),
             duration_ms: Some(duration_ms),
         });
     }
@@ -305,7 +310,7 @@ pub async fn consensus_translate(
     translations_response.push(TranslationResponseItem {
         model: format!("Synthesized ({})", eval_model_name),
         combined: true,
-        text: strip_outer_brackets(&synthesized),
+        text: strip_outer_brackets(&synthesized).to_string(),
         duration_ms: None,
     });
 

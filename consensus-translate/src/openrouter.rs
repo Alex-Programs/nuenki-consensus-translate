@@ -173,10 +173,6 @@ impl OpenRouterClient {
             });
 
         let cost = Self::calculate_cost(model, prompt_tokens, completion_tokens);
-        info!(
-            "Parsed response: content='{}', prompt_tokens={}, completion_tokens={}, cost={}",
-            chat_response.choices[0].message.content, prompt_tokens, completion_tokens, cost
-        );
 
         Ok((chat_response.choices[0].message.content.clone(), cost))
     }
