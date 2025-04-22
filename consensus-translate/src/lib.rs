@@ -46,6 +46,20 @@ pub enum Formality {
     MoreFormal,
 }
 
+fn strip_outer_brackets(s: &str) -> String {
+    let trimmed = s.trim();
+    let mut start = 0;
+    let mut end = trimmed.len();
+    let chars: Vec<_> = trimmed.chars().collect();
+    while start < end && chars[start] == '[' {
+        start += 1;
+    }
+    while end > start && chars[end - 1] == ']' {
+        end -= 1;
+    }
+    chars[start..end].iter().collect()
+}
+
 pub async fn consensus_translate(
     sentence: String,
     target_lang: Language,
@@ -121,10 +135,11 @@ pub async fn consensus_translate(
 
                     let start_time = Instant::now();
 
-                    let (translation, cost) = openrouter_client
+                    let (mut translation, cost) = openrouter_client
                         .complete(&system_prompt_clone, &user_prompt_clone, model_name, 0.7) // Use separate system/user prompts
                         .await
                         .map_err(|e| format!("OpenRouter error for {}: {}", model_name, e))?;
+                    translation = strip_outer_brackets(&translation);
 
                     let duration = start_time.elapsed();
                     let duration_ms = duration.as_millis() as u32;
@@ -282,7 +297,7 @@ pub async fn consensus_translate(
         translations_response.push(TranslationResponseItem {
             model: source_name,
             combined: false,
-            text: translation,
+            text: strip_outer_brackets(&translation),
             duration_ms: Some(duration_ms),
         });
     }
@@ -290,7 +305,7 @@ pub async fn consensus_translate(
     translations_response.push(TranslationResponseItem {
         model: format!("Synthesized ({})", eval_model_name),
         combined: true,
-        text: synthesized,
+        text: strip_outer_brackets(&synthesized),
         duration_ms: None,
     });
 
