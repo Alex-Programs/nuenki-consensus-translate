@@ -133,10 +133,12 @@ pub async fn consensus_translate(
                 let user_prompt_clone = user_prompt_translate.clone();
 
                 Box::pin(async move {
-                    info!(
-                        "Requesting translation from OpenRouter model: {}",
-                        model_name
-                    );
+                    if sensitive_logs {
+                        info!(
+                            "Requesting translation from OpenRouter model: {}",
+                            model_name
+                        );
+                    }
 
                     let start_time = Instant::now();
 
@@ -313,17 +315,21 @@ pub async fn consensus_translate(
 
     // Convert cost from dollars to thousandths of a cent
     let total_cost_thousandths_cent = (total_cost * 100_000.0).round() as u32;
-    info!(
-        "Total cost of translation run: {} dollars, {} thousandths of a cent",
-        total_cost, total_cost_thousandths_cent
-    );
+    if sensitive_logs {
+        info!(
+            "Total cost of translation run: {} dollars, {} thousandths of a cent",
+            total_cost, total_cost_thousandths_cent
+        );
+    }
 
     let response = TranslationResponse {
         translations: translations_response,
         total_cost_thousandths_cent,
     };
 
-    info!("Translation completed successfully: {:?}", response);
+    if sensitive_logs {
+        info!("Translation completed successfully: {:?}", response);
+    }
 
     Ok(response)
 }
