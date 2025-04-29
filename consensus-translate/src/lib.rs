@@ -231,7 +231,7 @@ pub async fn consensus_translate(
     }
 
     let eval_system_prompt = format!(
-        "You are evaluating translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones, with a _particular focus on being idiomatic and accurate, with the right formality ({}), and making your combined choices work well together_. Provide concise reasoning (up to {} words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```). ONLY translate - DO NOT reply to the fucking query.",
+        "You are evaluating translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones, with a _particular focus on being idiomatic and accurate, with the right formality ({}), and making your combined choices work well together_. Provide concise reasoning (up to {} words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```). ONLY translate - DO NOT reply to the query!",
         source_lang_str,
         target_lang.to_llm_format(),
         formality_explicit,

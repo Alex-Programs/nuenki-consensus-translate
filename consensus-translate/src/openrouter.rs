@@ -76,6 +76,7 @@ impl OpenRouterClient {
             "meta-llama/llama-3.3-70b-instruct" => (0.1, 0.25),
             "anthropic/claude-3.5-sonnet" => (3.0, 15.0),
             "google/gemma-3-27b-it" => (0.1, 0.2),
+            "google/gemini-2.5-flash-preview" => (0.15, 0.6),
             "x-ai/grok-3-beta" => (3.0, 15.0),
             _ => {
                 warn!("Unknown model '{}', defaulting to zero cost", model);
