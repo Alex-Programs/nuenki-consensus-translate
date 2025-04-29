@@ -119,6 +119,15 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
             ],
             eval_source: TranslationSource::Openrouter(GPT41),
         },
+        Language::Welsh | Language::Thai | Language::Klingon => SourceResponse {
+            translate_sources: vec![
+                TranslationSource::Openrouter(GPT41),
+                TranslationSource::Openrouter(SONNET35),
+                TranslationSource::Openrouter(GPT4O),
+                TranslationSource::Openrouter(GROK3),
+            ],
+            eval_source: TranslationSource::Openrouter(GPT41),
+        },
         Language::Unknown | _ => SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT41),

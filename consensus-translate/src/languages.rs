@@ -41,6 +41,9 @@ pub enum Language {
     Turkish,
     Ukrainian,
     Vietnamese,
+    Klingon,
+    Thai,
+    Welsh,
     English,
     Unknown,
 }
@@ -48,6 +51,9 @@ pub enum Language {
 impl Language {
     pub fn to_llm_format(&self) -> String {
         match self {
+            Language::Klingon => "Klingon (Romanised)".to_string(),
+            Language::Thai => "Thai".to_string(),
+            Language::Welsh => "Welsh (Cymraeg)".to_string(),
             Language::Arabic => "Arabic".to_string(),
             Language::ArabicStandard => "Arabic (Standard)".to_string(),
             Language::Bulgarian => "Bulgarian".to_string(),
