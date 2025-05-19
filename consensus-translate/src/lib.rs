@@ -247,7 +247,7 @@ pub async fn consensus_translate(
     let openrouter_client = openrouter::OpenRouterClient::new(&openrouter_api_key);
 
     let (eval_response, eval_cost) = openrouter_client
-        .complete(&eval_system_prompt, &eval_user_prompt, eval_model_name, 0.7) // Use separate system/user prompts
+        .complete(&eval_system_prompt, &eval_user_prompt, eval_model_name, 0.1) // Use separate system/user prompts
         .await
         .map_err(|e| {
             error!("Evaluation failed: {}", e);
