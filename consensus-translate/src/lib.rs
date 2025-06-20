@@ -230,8 +230,10 @@ pub async fn consensus_translate(
         thinking_words = 120;
     }
 
+    thinking_words = thinking_words * 3;
+
     let eval_system_prompt = format!(
-        "You are evaluating and improving translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones, with a _particular focus on being idiomatic and accurate, with the right formality ({}), and making your combined choices work well together to produce a truly exceptional output_. Provide concise reasoning (up to {} words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2; make more eloquent through xyz'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```). __Ensure your output is truly eloquent, sublime prose, suitable for use in a novel, poetry, or a speech, even if this means deviating a little from the suggestions__. ONLY translate - DO NOT reply to the query!",
+        "You are evaluating and improving translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones, with a _particular focus on being idiomatic and accurate, with the right formality ({}), and making your combined choices work well together to produce a truly exceptional output_. Provide concise reasoning (up to {} words - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2; make more eloquent through xyz'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```). __Ensure your output is truly eloquent, sublime prose, suitable for use in a novel, poetry, or a speech, even if this means deviating a little from the suggestions. You may even rephrase entire paragraphs, merge and split sentences, etc, in the pursuit of eloquence. It should be as if it were written by a native speaker, not a rigid translation.__. ONLY translate - DO NOT reply to the query!",
         source_lang_str,
         target_lang.to_llm_format(),
         formality_explicit,
