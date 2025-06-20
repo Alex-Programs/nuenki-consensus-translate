@@ -2,11 +2,13 @@ use crate::{languages::Language, TranslationSource};
 
 const GPT4O: &'static str = "openai/gpt-4o-2024-11-20";
 const GPT41: &'static str = "openai/gpt-4.1";
-const GEMINI_FLASH2_5: &'static str = "google/gemini-2.5-flash-preview";
+const GEMINI_FLASH2_5: &'static str = "google/gemini-2.5-flash";
 const LLAMA33_70B: &'static str = "meta-llama/llama-3.3-70b-instruct";
 const LLAMA4MAV: &'static str = "meta-llama/llama-4-maverick";
 const DEEPSEEKV3: &'static str = "deepseek/deepseek-chat-v3-0324";
-const SONNET37: &'static str = "anthropic/claude-3.7-sonnet";
+const SONNET4: &'static str = "anthropic/claude-sonnet-4";
+const OPUS4: &'static str = "anthropic/claude-opus-4";
+
 const GEMMA3_27B: &'static str = "google/gemma-3-27b-it";
 const GROK3: &'static str = "x-ai/grok-3-beta";
 
@@ -25,7 +27,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
                 TranslationSource::Openrouter(DEEPSEEKV3),
                 TranslationSource::Openrouter(GROK3),
             ],
-            eval_source: TranslationSource::Openrouter(GPT4O),
+            eval_source: TranslationSource::Openrouter(OPUS4),
         },
         Language::Esperanto => SourceResponse {
             translate_sources: vec![
@@ -45,12 +47,12 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
                 TranslationSource::Openrouter(GPT41),
                 TranslationSource::Openrouter(GPT4O),
             ],
-            eval_source: TranslationSource::Openrouter(GPT41),
+            eval_source: TranslationSource::Openrouter(GROK3),
         },
         Language::German => SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT4O),
-                TranslationSource::Openrouter(GEMMA3_27B),
+                //TranslationSource::Openrouter(GEMMA3_27B),
                 TranslationSource::Openrouter(GROK3),
                 TranslationSource::Openrouter(LLAMA4MAV),
                 TranslationSource::Openrouter(DEEPSEEKV3),
@@ -61,7 +63,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
         Language::Hungarian => SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT4O),
-                TranslationSource::Openrouter(SONNET37),
+                TranslationSource::Openrouter(SONNET4),
                 TranslationSource::Openrouter(GROK3),
                 TranslationSource::Openrouter(LLAMA4MAV),
                 TranslationSource::Openrouter(DEEPSEEKV3),
@@ -73,7 +75,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT41),
                 TranslationSource::Openrouter(GPT4O),
-                TranslationSource::Openrouter(GEMMA3_27B),
+                //TranslationSource::Openrouter(GEMMA3_27B),
                 TranslationSource::Openrouter(LLAMA4MAV),
                 TranslationSource::Openrouter(DEEPSEEKV3),
                 TranslationSource::Openrouter(GEMINI_FLASH2_5),
@@ -82,27 +84,27 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
         },
         Language::Japanese => SourceResponse {
             translate_sources: vec![
-                TranslationSource::Openrouter(GPT4O),
-                TranslationSource::Openrouter(SONNET37),
-                TranslationSource::Openrouter(GROK3),
-                TranslationSource::Openrouter(LLAMA4MAV),
+                TranslationSource::Openrouter(GPT41),
+                TranslationSource::Openrouter(SONNET4),
+                //TranslationSource::Openrouter(GROK3),
+                //TranslationSource::Openrouter(LLAMA4MAV),
                 TranslationSource::Openrouter(DEEPSEEKV3),
                 TranslationSource::Openrouter(GEMINI_FLASH2_5),
             ],
-            eval_source: TranslationSource::Openrouter(GPT41),
+            eval_source: TranslationSource::Openrouter(OPUS4),
         },
         Language::Korean => SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT41),
-                TranslationSource::Openrouter(SONNET37),
-                TranslationSource::Openrouter(GEMMA3_27B),
+                TranslationSource::Openrouter(SONNET4),
+                //TranslationSource::Openrouter(GEMMA3_27B),
                 TranslationSource::Openrouter(GROK3),
             ],
             eval_source: TranslationSource::Openrouter(GPT41),
         },
         Language::Spanish => SourceResponse {
             translate_sources: vec![
-                TranslationSource::Openrouter(SONNET37),
+                TranslationSource::Openrouter(SONNET4),
                 TranslationSource::Openrouter(GPT4O),
                 TranslationSource::Openrouter(LLAMA4MAV),
                 TranslationSource::Openrouter(DEEPSEEKV3),
@@ -131,7 +133,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
         Language::Vietnamese => SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT41),
-                TranslationSource::Openrouter(GEMMA3_27B),
+                //TranslationSource::Openrouter(GEMMA3_27B),
                 TranslationSource::Openrouter(GPT4O),
                 TranslationSource::Openrouter(GROK3),
                 TranslationSource::Openrouter(DEEPSEEKV3),
@@ -141,7 +143,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
         Language::Welsh | Language::Thai | Language::Klingon => SourceResponse {
             translate_sources: vec![
                 TranslationSource::Openrouter(GPT41),
-                TranslationSource::Openrouter(SONNET37),
+                TranslationSource::Openrouter(SONNET4),
                 TranslationSource::Openrouter(GPT4O),
                 TranslationSource::Openrouter(GROK3),
             ],
@@ -149,8 +151,9 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
         },
         Language::Unknown | _ => SourceResponse {
             translate_sources: vec![
-                TranslationSource::Openrouter(GEMMA3_27B),
-                TranslationSource::Openrouter(GPT4O),
+                //TranslationSource::Openrouter(GEMMA3_27B),
+                TranslationSource::Openrouter(SONNET4),
+                TranslationSource::Openrouter(GPT41),
                 TranslationSource::Openrouter(LLAMA4MAV),
                 TranslationSource::Openrouter(DEEPSEEKV3),
                 TranslationSource::Openrouter(GEMINI_FLASH2_5),
