@@ -27,7 +27,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
                 TranslationSource::Openrouter(DEEPSEEKV3),
                 TranslationSource::Openrouter(GROK3),
             ],
-            eval_source: TranslationSource::Openrouter(OPUS4),
+            eval_source: TranslationSource::Openrouter(GPT41),
         },
         Language::Esperanto => SourceResponse {
             translate_sources: vec![
@@ -91,7 +91,7 @@ pub fn get_appropriate_sources(target_lang: Language) -> SourceResponse {
                 TranslationSource::Openrouter(DEEPSEEKV3),
                 TranslationSource::Openrouter(GEMINI_FLASH2_5),
             ],
-            eval_source: TranslationSource::Openrouter(OPUS4),
+            eval_source: TranslationSource::Openrouter(GPT41),
         },
         Language::Korean => SourceResponse {
             translate_sources: vec![
