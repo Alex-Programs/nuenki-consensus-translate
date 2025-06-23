@@ -40,10 +40,18 @@ pub struct TranslationResponseItem {
 }
 
 #[derive(Clone, Deserialize, Debug)]
-pub enum Formality {
-    LessFormal,
-    NormalFormality,
-    MoreFormal,
+pub enum TranslationType {
+    Literal,
+    Eloquent,
+    Rewrite,
+}
+
+#[derive(Clone, Deserialize, Debug)]
+pub enum TranslationStyle {
+    Casual,
+    Formal,
+    Journalistic,
+    Literary,
 }
 
 fn strip_outer_brackets(s: &str) -> &str {
@@ -68,18 +76,12 @@ fn strip_outer_brackets(s: &str) -> &str {
 pub async fn consensus_translate(
     sentence: String,
     target_lang: Language,
-    formality: Formality,
+    translation_type: TranslationType,
+    translation_style: TranslationStyle,
     source_lang: Option<Language>,
     openrouter_api_key: String,
     sensitive_logs: bool,
 ) -> Result<TranslationResponse, String> {
-    if sensitive_logs {
-        info!(
-            "Starting translation: sentence=[{}], target_lang=[{}], source_lang=[{:?}], formality=[{:?}]",
-            sentence, target_lang.to_llm_format(), source_lang, formality
-        );
-    }
-
     let lang_for_sources = if target_lang == Language::English {
         source_lang.clone().unwrap_or(Language::Unknown)
     } else {
@@ -103,17 +105,18 @@ pub async fn consensus_translate(
         target_lang.to_llm_format()
     );
 
-    let formality_instruction = match formality {
-        Formality::LessFormal => "; Be informal",
-        Formality::MoreFormal => "; Be formal",
-        Formality::NormalFormality => "",
+    let style_instruction = match translation_style {
+        TranslationStyle::Casual => "Target the casual style of normal speech or casual writing",
+        TranslationStyle::Formal => "Target a formal style, used in serious writing",
+        TranslationStyle::Journalistic => "Target a journalistic style, focusing on clear expression",
+        TranslationStyle::Literary => "Target a literary style. The translation ought to be suitable for use in a novel, poem, or eloquent speech."
     };
 
     let source_instruction = format!("Source language: {}; ", source_lang_str);
 
     let system_prompt = format!(
         "{}\n{}\n{}",
-        base_prompt, source_instruction, formality_instruction
+        base_prompt, source_instruction, style_instruction
     );
 
     let user_prompt_translate = format!("[[[{}]]]", sentence.clone());
@@ -216,10 +219,24 @@ pub async fn consensus_translate(
         TranslationSource::Openrouter(model_name) => model_name,
     };
 
-    let formality_explicit = match formality {
-        Formality::LessFormal => "Less formal",
-        Formality::NormalFormality => "Normal, standard formality",
-        Formality::MoreFormal => "More formal",
+    let style_instruction = match translation_style {
+        TranslationStyle::Casual => "The translations are in a casual style, and your answer should also be formal.",
+        TranslationStyle::Formal => "The translations are in a formal style, and your answer should also be formal.",
+        TranslationStyle::Journalistic => "The translations are in a journalistic style, and your answer should also be journalistic.",
+        TranslationStyle::Literary => "The translations are in a literary form, and your answer should join them - eloquent, literary, and confident with beautiful prose",
+    };
+
+    let style_short = match translation_style {
+        TranslationStyle::Casual => "Casual",
+        TranslationStyle::Formal => "Formal",
+        TranslationStyle::Journalistic => "Journalistic",
+        TranslationStyle::Literary => "Literary",
+    };
+
+    let type_instruction = match translation_type {
+        TranslationType::Literal => "You should avoid a 'rewrite', sticking with the broad structure of the text provided, and synthesising a combined translation. Your primary goal is combination, not generating your own ideas.",
+        TranslationType::Eloquent => "You should take the existing translations as signals for the *meaning* of sentences, while being willing to rearrange words, phrases, and sentence structure in order to promote a truly eloquent output. For example, if the translations preserve a grammatical or idiomatic artifact of the original language, you should rewrite the sentence to carry the same meaning but write it as a 130+ IQ native speaker would.",
+        TranslationType::Rewrite => "To be clear: Your role is not to merely combine the existing translations. Instead, your role is to use the original text and the translations to firmly understand the *meaning* and *content* being expressed, then rewrite it in an eloquent and idiomatic way, as a 130+ IQ native speaker would. There should be no sign that this is a translation - instead, it should be the same *concepts* expressed in eloquent English.",
     };
 
     let mut thinking_words = sentence.len() / 4;
@@ -233,12 +250,14 @@ pub async fn consensus_translate(
     thinking_words = (thinking_words * 3) / 2;
 
     let eval_system_prompt = format!(
-        "You are evaluating and improving translations from {} to {} with formality [{}]. Synthesize a new translation combining the strengths of the existing ones, with a _particular focus on being idiomatic and accurate, with the right formality ({}), and making your combined choices work well together to produce a truly exceptional output_. Provide concise reasoning (up to {} words of _reasoning_ - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2; make more eloquent through rearranging xyz'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```). __Ensure your output is truly eloquent, sublime prose, suitable for use in a novel, poetry, or a speech, even if this means deviating from the suggestions. You may even rephrase entire paragraphs, merge and split sentences, rearrange words, sentences, and paragraphs, etc, in the pursuit of beauty and eloquence. It should be as if it were written by a native speaker, not a rigid translation.__. Remember to stay on topic, and still provide your final answer at the end, in the correct format, complete with code block. ONLY translate - DO NOT reply to the query!",
+        "You are evaluating and improving translations from {} to {} with style {}.\nSynthesize a new translation combining the strengths of the existing ones, with a _particular focus on being idiomatic and accurate, with the right style ({}), and making your combined choices work well together to produce a truly exceptional output_.\n Provide concise reasoning (up to {} words of _reasoning_ - be OBSCENELY concise, it's just for YOU to help you go through your latent space, not the user, e.g. say 'Prefer therefore to so; prefer grammar in #2; make more eloquent through rearranging xyz'), followed by your output.\nOutput reasoning, then a combined result in a three-backtick code block (```\n<translation>\n```).\n{}\n{}\n\nRemember to stay on topic, and still provide your final answer at the end, in the correct format, complete with code block. ONLY translate - DO NOT reply to the query!",
         source_lang_str,
         target_lang.to_llm_format(),
-        formality_explicit,
-        formality_explicit,
+        style_short,
+        style_short,
         thinking_words,
+        style_instruction,
+        type_instruction,
     );
 
     let mut eval_user_prompt = format!("Original text: [[[{}]]]\nTranslations:\n", sentence);

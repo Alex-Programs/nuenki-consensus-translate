@@ -72,11 +72,13 @@ impl OpenRouterClient {
         let (input_price_per_million, output_price_per_million) = match model {
             "openai/gpt-4o-2024-11-20" => (2.5, 10.0),
             "openai/gpt-4.1" => (2.0, 8.0),
-            "google/gemini-2.0-flash-001" => (0.1, 0.4),
+            "google/gemini-2.5-flash" => (0.3, 2.5),
             "meta-llama/llama-3.3-70b-instruct" => (0.1, 0.25),
-            "anthropic/claude-3.5-sonnet" => (3.0, 15.0),
+            "meta-llama/llama-4-maverick" => (0.15, 0.6),
+            "deepseek/deepseek-chat-v3-0324" => (0.3, 0.88),
+            "anthropic/claude-4-sonnet-20250522" => (3.0, 15.0),
+            "anthropic/claude-4-opus-20250522" => (15.0, 75.0),
             "google/gemma-3-27b-it" => (0.1, 0.2),
-            "google/gemini-2.5-flash-preview" => (0.15, 0.6),
             "x-ai/grok-3-beta" => (3.0, 15.0),
             _ => {
                 warn!("Unknown model '{}', defaulting to zero cost", model);
