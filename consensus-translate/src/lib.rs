@@ -106,10 +106,10 @@ pub async fn consensus_translate(
     );
 
     let style_instruction = match translation_style {
-        TranslationStyle::Casual => "Target the casual style of normal speech or casual writing",
-        TranslationStyle::Formal => "Target a formal style, used in serious writing",
-        TranslationStyle::Journalistic => "Target a journalistic style, focusing on clear expression",
-        TranslationStyle::Literary => "Target a literary style. The translation ought to be suitable for use in a novel, poem, or eloquent speech."
+        TranslationStyle::Casual => "Use a relaxed, conversational tone, like everyday speech or informal writing.",
+        TranslationStyle::Formal => "Adopt a polished, structured, and formal style - typical of academic or professional texts.",
+        TranslationStyle::Journalistic => "Aim for clarity and directness - like a news article or informative report.",
+        TranslationStyle::Literary => "Target a literary, rhetorically rich, and elevated register - akin to high literature or formal oratory."
     };
 
     let source_instruction = format!("Source language: {}; ", source_lang_str);
@@ -220,10 +220,10 @@ pub async fn consensus_translate(
     };
 
     let style_instruction = match translation_style {
-        TranslationStyle::Casual => "The translations are in a casual style, and your answer should also be formal.",
-        TranslationStyle::Formal => "The translations are in a formal style, and your answer should also be formal.",
-        TranslationStyle::Journalistic => "The translations are in a journalistic style, and your answer should also be journalistic.",
-        TranslationStyle::Literary => "The translations are in a literary form, and your answer should join them - eloquent, literary, and confident with beautiful prose",
+        TranslationStyle::Casual => "The translations follow a casual style; your response should match—conversational and informal.",
+        TranslationStyle::Formal => "The translations use a formal register; your response should be equally structured and professional.",
+        TranslationStyle::Journalistic => "The translations adopt a journalistic tone; your response should be clear, concise, and informative.",
+        TranslationStyle::Literary => "The translations are literary - rhetorically rich, elevated, and evocative; your response should follow suit, as if part of high literature or formal oratory.",
     };
 
     let style_short = match translation_style {

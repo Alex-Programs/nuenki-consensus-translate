@@ -76,8 +76,8 @@ impl OpenRouterClient {
             "meta-llama/llama-3.3-70b-instruct" => (0.1, 0.25),
             "meta-llama/llama-4-maverick" => (0.15, 0.6),
             "deepseek/deepseek-chat-v3-0324" => (0.3, 0.88),
-            "anthropic/claude-4-sonnet-20250522" => (3.0, 15.0),
-            "anthropic/claude-4-opus-20250522" => (15.0, 75.0),
+            "anthropic/claude-sonnet-4" => (3.0, 15.0),
+            "anthropic/claude-opus-4" => (15.0, 75.0),
             "google/gemma-3-27b-it" => (0.1, 0.2),
             "x-ai/grok-3-beta" => (3.0, 15.0),
             _ => {
